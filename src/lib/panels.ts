@@ -1,8 +1,43 @@
 import { useQuery } from "@tanstack/react-query";
-import { BadgeCheck, Briefcase, Store, type LucideIcon } from "lucide-react";
+import {
+  BadgeCheck,
+  BarChart3,
+  Boxes,
+  Briefcase,
+  Building2,
+  ClipboardCheck,
+  CreditCard,
+  Crown,
+  HeadphonesIcon,
+  LayoutDashboard,
+  LifeBuoy,
+  ListChecks,
+  MessageCircle,
+  Package,
+  Settings,
+  ShoppingBag,
+  Sparkles,
+  Star,
+  Store,
+  Truck,
+  Undo2,
+  Users,
+  Wallet,
+  Wrench,
+  type LucideIcon,
+} from "lucide-react";
 import { api } from "./api";
 
 export type PanelKey = "admin" | "seller" | "partner";
+
+export interface PanelLink {
+  to: string;
+  label: string;
+  icon: LucideIcon;
+  end?: boolean;
+  /** Optional group heading shown above the link. */
+  group?: string;
+}
 
 export interface PanelInfo {
   key: PanelKey;
@@ -10,7 +45,7 @@ export interface PanelInfo {
   label: string;
   path: string;
   icon: LucideIcon;
-  links: { to: string; label: string; end?: boolean }[];
+  links: PanelLink[];
 }
 
 /** One panel per role. Order decides where a user with several roles lands first. */
@@ -22,23 +57,40 @@ export const PANELS: PanelInfo[] = [
     path: "/admin",
     icon: BadgeCheck,
     links: [
-      { to: "/admin", label: "Overview", end: true },
-      { to: "/admin/listings", label: "Listing review" },
-      { to: "/admin/people", label: "Approvals" },
-      { to: "/admin/configure", label: "Configure" },
+      { to: "/admin", label: "Overview", icon: LayoutDashboard, end: true },
+      { to: "/admin/showrooms", label: "Showrooms", icon: Building2, group: "Review" },
+      { to: "/admin/listings", label: "Listing review", icon: ListChecks },
+      { to: "/admin/people", label: "Partners & people", icon: Users },
+      { to: "/admin/featured", label: "Featured requests", icon: Sparkles },
+      { to: "/admin/support", label: "Support desk", icon: HeadphonesIcon, group: "Operate" },
+      { to: "/admin/configure", label: "Configure", icon: Settings },
     ],
   },
   {
     key: "seller",
     role: "business_seller",
-    label: "Seller",
-    path: "/seller",
+    label: "Showroom",
+    path: "/seller/dashboard",
     icon: Store,
     links: [
-      { to: "/seller", label: "Dashboard", end: true },
-      { to: "/seller/listings/new", label: "Add listing" },
-      { to: "/seller/orders", label: "Orders" },
-      { to: "/seller/storefront", label: "Storefront" },
+      { to: "/seller/dashboard", label: "Dashboard", icon: LayoutDashboard },
+      { to: "/seller/products", label: "Products", icon: Package, group: "Catalogue" },
+      { to: "/seller/inventory", label: "Inventory", icon: Boxes },
+      { to: "/seller/promotions", label: "Promotions", icon: Sparkles },
+      { to: "/seller/orders", label: "Orders", icon: ShoppingBag, group: "Sales" },
+      { to: "/seller/delivery", label: "Delivery", icon: Truck },
+      { to: "/seller/returns", label: "Returns & warranty", icon: Undo2 },
+      { to: "/seller/customers", label: "Customers", icon: Users },
+      { to: "/seller/messages", label: "Messages", icon: MessageCircle },
+      { to: "/seller/reviews", label: "Reviews", icon: Star },
+      { to: "/seller/inspections", label: "Inspections", icon: ClipboardCheck, group: "Trust" },
+      { to: "/seller/service-partners", label: "Service partners", icon: Wrench },
+      { to: "/seller/payments", label: "Payments", icon: Wallet, group: "Business" },
+      { to: "/seller/analytics", label: "Analytics", icon: BarChart3 },
+      { to: "/seller/subscription", label: "Subscription", icon: Crown },
+      { to: "/seller/business-profile", label: "Business profile", icon: Building2 },
+      { to: "/seller/settings", label: "Settings", icon: Settings },
+      { to: "/seller/support", label: "Support", icon: LifeBuoy },
     ],
   },
   {
@@ -48,8 +100,10 @@ export const PANELS: PanelInfo[] = [
     path: "/partner",
     icon: Briefcase,
     links: [
-      { to: "/partner", label: "Jobs", end: true },
-      { to: "/partner/earnings", label: "Earnings" },
+      { to: "/partner", label: "Jobs", icon: ClipboardCheck, end: true },
+      { to: "/partner/messages", label: "Messages", icon: MessageCircle },
+      { to: "/partner/earnings", label: "Earnings", icon: CreditCard },
+      { to: "/partner/support", label: "Support", icon: LifeBuoy },
     ],
   },
 ];

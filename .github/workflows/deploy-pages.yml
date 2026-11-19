@@ -35,6 +35,11 @@ jobs:
           # Override under Settings → Secrets and variables → Actions → Variables.
           VITE_API_URL: ${{ vars.VITE_API_URL || 'https://suregad-backend.onrender.com' }}
           VITE_MARKETPLACE_URL: ${{ vars.VITE_MARKETPLACE_URL || 'https://auxxbaysaranya-maker.github.io/suregad-frontend/' }}
+          # Optional Firebase sign-in (Settings → Secrets and variables → Actions → Variables).
+          VITE_FIREBASE_API_KEY: ${{ vars.VITE_FIREBASE_API_KEY }}
+          VITE_FIREBASE_AUTH_DOMAIN: ${{ vars.VITE_FIREBASE_AUTH_DOMAIN }}
+          VITE_FIREBASE_PROJECT_ID: ${{ vars.VITE_FIREBASE_PROJECT_ID }}
+          VITE_FIREBASE_APP_ID: ${{ vars.VITE_FIREBASE_APP_ID }}
 
       # GitHub Pages has no SPA routing: serve the app for unknown paths (e.g. /seller/orders).
       - name: SPA fallback
