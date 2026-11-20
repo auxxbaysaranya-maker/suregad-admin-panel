@@ -207,3 +207,62 @@
     scroll-behavior: auto !important;
   }
 }
+
+@keyframes toast-in { from { opacity: 0; transform: translateY(16px) scale(0.96); } to { opacity: 1; transform: none; } }
+@keyframes toast-out { from { opacity: 1; transform: none; } to { opacity: 0; transform: translateY(8px) scale(0.97); } }
+@keyframes toast-progress { from { transform: scaleX(1); } to { transform: scaleX(0); } }
+
+/* Scrollable areas that should not show a scrollbar (e.g. the panel sidebar). */
+@utility scrollbar-none {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  &::-webkit-scrollbar { display: none; }
+}
+
+/* Tables become cards on phones (see Table in components/kit.tsx). */
+@media (max-width: 639px) {
+  .sg-table tbody > tr {
+    display: grid;
+    gap: 0.35rem;
+    padding: 0.85rem 1rem;
+    border-radius: 20px;
+    background: #fff;
+    box-shadow: inset 0 0 0 1px var(--color-line);
+  }
+  .sg-table tbody > tr > td {
+    display: flex;
+    min-width: 0;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    padding: 0 !important;
+    max-width: none !important;
+    white-space: normal;
+    text-align: right;
+  }
+  .sg-table tbody > tr > td::before {
+    content: attr(data-label);
+    flex-shrink: 0;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--color-muted);
+    text-align: left;
+  }
+  /* The first cell is the card title. */
+  .sg-table tbody > tr > td:first-child {
+    justify-content: flex-start;
+    margin-bottom: 0.15rem;
+    font-size: 15px;
+    font-weight: 600;
+    text-align: left;
+  }
+  .sg-table tbody > tr > td:first-child::before,
+  .sg-table tbody > tr > td[data-label=""]::before {
+    content: none;
+  }
+  .sg-table tbody > tr > td[data-label=""] {
+    justify-content: flex-end;
+  }
+}

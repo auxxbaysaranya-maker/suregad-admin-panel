@@ -276,7 +276,7 @@ export function ReviewsPage() {
       <ErrorBox error={query.error || action.error} />
       {query.isLoading || !data ? <Loading /> : (
         <>
-          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+          <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
             <StatCard icon={Star} label="Average rating" value={data.summary.average ?? "—"} hint={`${data.summary.count} reviews`} tone="amber" />
             <StatCard icon={MessageCircle} label="Replied" value={`${data.summary.replyRate}%`} tone="brand" />
             <StatCard icon={BarChart3} label="Last 30 days" value={data.summary.last30} tone="violet" />
@@ -436,7 +436,7 @@ export function PaymentsPage() {
       {query.isLoading || !data ? <Loading /> : (
         <>
           {!data.fees.configured ? <div className="mb-4"><Notice tone="amber">SureGad hasn't published a commission rate yet, so fees show as 0%. Final payouts use the rate in force when SureGad settles.</Notice></div> : null}
-          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+          <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
             <StatCard icon={IndianRupee} label="Gross sales" value={money(data.totals.grossPaise)} />
             <StatCard icon={ShoppingBag} label="Orders in progress (net)" value={money(data.totals.inProgressPaise)} tone="violet" />
             <StatCard icon={Wallet} label="Payable to you" value={money(data.totals.payablePaise)} hint={`${money(data.totals.onHoldPaise)} on ${data.fees.settlementHoldDays}-day hold`} tone="green" />
@@ -500,13 +500,13 @@ export function AnalyticsPage() {
       <ErrorBox error={query.error || exporter.error} />
       {query.isLoading || !data ? <Loading rows={6} /> : (
         <>
-          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+          <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
             <StatCard icon={IndianRupee} label="Revenue" value={money(data.totals.revenuePaise)} hint={`Avg order ${money(data.totals.averageOrderPaise)}`} />
             <StatCard icon={ShoppingBag} label="Orders" value={data.totals.orders} hint={`${data.totals.cancellations} cancelled or returned`} tone="violet" />
             <StatCard icon={Users} label="Listing views" value={data.totals.views} hint={data.totals.conversionPercent !== null ? `${data.totals.conversionPercent}% became orders` : undefined} tone="green" />
             <StatCard icon={Percent} label="Gross margin" value={data.totals.grossMarginPaise !== null ? money(data.totals.grossMarginPaise) : "—"} hint={data.totals.grossMarginPaise === null ? "Add unit costs to see margin" : undefined} tone="amber" />
           </div>
-          <div className="mt-3 grid gap-3 sm:grid-cols-3">
+          <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3">
             <StatCard icon={MessageCircle} label="New buyer chats" value={data.totals.conversations} />
             <StatCard icon={ClipboardCheck} label="Inspections booked" value={data.totals.inspections} tone="violet" />
             <StatCard icon={XCircle} label="Return requests" value={data.totals.returns} tone="red" />

@@ -33,13 +33,15 @@ npm run build      # type-check + production build into dist/
 | Variable | Purpose |
 | --- | --- |
 | `VITE_API_URL` | Origin of the SureGad API. Empty means same origin (the dev proxy). |
-| `VITE_BASE_PATH` | Path the site is served from. `/` locally; the Pages workflow sets `/<repo-name>/`. |
+| `VITE_BASE_PATH` | Path the site is served from. `/` locally and on `dashboard.suregad.in` (the workflow default). |
 | `VITE_MARKETPLACE_URL` | The buyer marketplace, for "View on marketplace" and buyer-chat links. |
 
 ## GitHub Pages
 
-`.github/workflows/deploy-pages.yml` builds and publishes on every push to `main`, using `https://suregad-backend.onrender.com` as the API unless the `VITE_API_URL` repository variable says otherwise.
+`.github/workflows/deploy-pages.yml` builds and publishes on every push to `main`, using `https://suregad-backend-1b10e3df.appliedintelligencecorporation.com` as the API unless the `VITE_API_URL` repository variable says otherwise.
 
 One-time setup: **Settings → Pages → Build and deployment → Source: GitHub Actions**.
 
-The panel is served at `https://<user>.github.io/<repo-name>/`. Because the marketplace is on the same `github.io` origin, a seller signed in here is also signed in when they open their buyer chats in the marketplace.
+The panel is served at `https://dashboard.suregad.in/` (custom domain; the workflow writes `CNAME`). If you publish at `https://<user>.github.io/<repo-name>/` instead, set the `VITE_BASE_PATH` repository variable to `/<repo-name>/`, otherwise the page loads blank.
+
+The panel is an installable PWA with an Install prompt (Android/desktop), Add to Home Screen steps (iOS), and an **Update available** prompt after each deploy.

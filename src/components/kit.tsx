@@ -1,8 +1,9 @@
 import * as Dialog from "@radix-ui/react-dialog";
-import { useState, type ButtonHTMLAttributes, type InputHTMLAttributes, type ReactNode, type SelectHTMLAttributes, type TextareaHTMLAttributes } from "react";
+import { Children, cloneElement, isValidElement, useState, type ButtonHTMLAttributes, type ReactElement, type InputHTMLAttributes, type ReactNode, type SelectHTMLAttributes, type TextareaHTMLAttributes } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { AlertTriangle, ChevronLeft, ChevronRight, Inbox, Loader2, Search, X, type LucideIcon } from "lucide-react";
 import { cn, titleCase } from "../lib/utils";
+import { toast } from "./Toaster";
 
 /* ---------------- formatting ---------------- */
 
@@ -144,10 +145,10 @@ export function StatCard({ icon: Icon, label, value, hint, tone = "brand", onCli
   }[tone];
   const Tag = onClick ? "button" : "div";
   return (
-    <Tag type={onClick ? "button" : undefined} onClick={onClick} className={cn("flex items-center gap-4 rounded-[22px] bg-white p-4 text-left ring-1 ring-line", onClick && "transition hover:ring-brand-300")}>
-      <span className={cn("grid h-12 w-12 shrink-0 place-items-center rounded-2xl", tones)}><Icon size={22} /></span>
-      <span className="min-w-0">
-        <span className="block font-display text-[24px] leading-none font-bold">{value}</span>
+    <Tag type={onClick ? "button" : undefined} onClick={onClick} className={cn("flex min-w-0 flex-col items-start gap-2.5 rounded-[22px] bg-white p-3.5 text-left ring-1 ring-line sm:flex-row sm:items-center sm:gap-4 sm:p-4", onClick && "transition hover:ring-brand-300")}>
+      <span className={cn("grid h-10 w-10 shrink-0 place-items-center rounded-2xl sm:h-12 sm:w-12", tones)}><Icon size={20} /></span>
+      <span className="min-w-0 max-w-full">
+        <span className="block truncate font-display text-[clamp(18px,5vw,24px)] leading-none font-bold">{value}</span>
         <span className="mt-1 block text-[13px] text-muted">{label}</span>
         {hint ? <span className="mt-0.5 block text-[12px] text-muted">{hint}</span> : null}
       </span>
@@ -303,14 +304,29 @@ export function Chips<T extends string>({ options, value, onChange, labels }: { 
 
 /* ---------------- tables ---------------- */
 
+/**
+ * Data table. On phones each row becomes a card: the first cell is the card title and the
+ * other cells are shown as "label — value" pairs using the column headings.
+ */
 export function Table({ head, children, className }: { head: ReactNode[]; children: ReactNode; className?: string }) {
+  const labels = head.map((cell) => (typeof cell === "string" ? cell : ""));
+  const rows = Children.map(children, (row) => {
+    if (!isValidElement<{ children?: ReactNode }>(row)) return row;
+    let index = 0;
+    const cells = Children.map(row.props.children, (cell) => {
+      if (!isValidElement(cell)) return cell;
+      const label = labels[index++] || "";
+      return cloneElement(cell as ReactElement<Record<string, unknown>>, { "data-label": label });
+    });
+    return cloneElement(row, {}, cells);
+  });
   return (
-    <div className={cn("overflow-x-auto rounded-[22px] bg-white ring-1 ring-line", className)}>
-      <table className="w-full min-w-[640px] text-left text-[14px]">
-        <thead className="bg-canvas text-[12px] tracking-wide text-muted uppercase">
+    <div className={cn("sg-table rounded-[22px] sm:overflow-x-auto sm:bg-white sm:ring-1 sm:ring-line", className)}>
+      <table className="w-full text-left text-[14px] sm:min-w-[640px]">
+        <thead className="hidden bg-canvas text-[12px] tracking-wide text-muted uppercase sm:table-header-group">
           <tr>{head.map((cell, index) => <th key={index} scope="col" className="px-4 py-3 font-semibold whitespace-nowrap">{cell}</th>)}</tr>
         </thead>
-        <tbody className="divide-y divide-line">{children}</tbody>
+        <tbody className="block space-y-2.5 sm:table-row-group sm:space-y-0 sm:divide-y sm:divide-line">{rows}</tbody>
       </table>
     </div>
   );
@@ -359,19 +375,94 @@ export function Drawer({ open, onOpenChange, title, description, children, foote
  * Run an API call with busy/error state and refresh the given queries afterwards.
  * Every button that changes data goes through this, so failures are always shown.
  */
-export function useAction(invalidate: string[] = []) {
+const SUCCESS: Record<string, string | null> = {
+  save: "Changes saved",
+  create: "Created",
+  publish: "Listing updated",
+  archive: "Archived",
+  dup: "Duplicate created",
+  import: "Import finished",
+  add: "Units added",
+  status: "Status updated",
+  assign: "Listing updated",
+  delete: "Removed",
+  details: "Delivery details saved",
+  otp: "Handover confirmed",
+  proof: "Handover confirmed",
+  photo: "Photo attached",
+  doc: "Document uploaded",
+  reply: "Reply sent",
+  report: "Reported to SureGad",
+  send: "Request sent",
+  change: "Sent for verification",
+  close: "Ticket closed",
+  resolve: "Marked resolved",
+  mine: "Assigned to you",
+  csv: "Download ready",
+  mv: "Download ready",
+  export: "Download ready",
+  sales: "Download ready",
+  "chg-yes": "Change approved",
+  "chg-no": "Change declined",
+  start_review: "Review started",
+  approve: "Showroom approved",
+  request_info: "Information requested",
+  reject: "Rejected",
+  suspend: "Suspended",
+  restore: "Restored",
+  revoke: "Access revoked",
+  accepted: "Order accepted",
+  rejected: "Updated",
+  processing: "Packing started",
+  ready_for_dispatch: "Ready for dispatch",
+  dispatched: "Marked dispatched",
+  cancelled: "Order cancelled",
+  approved: "Return approved",
+  pickup_scheduled: "Pickup scheduled",
+  received: "Return received",
+  refund_requested: "Refund requested",
+  unpublish: "Listings hidden",
+  price: "Prices updated",
+  threshold: "Alert level updated",
+  ids: null,
+};
+
+/** Toast text for a finished action, or null for read-only actions (opening a file, revealing an IMEI). */
+function successMessage(key: string): string | null {
+  if (key in SUCCESS) return SUCCESS[key]!;
+  if (/^(open|pref-)/.test(key)) return key.startsWith("pref-") ? "Preference saved" : null;
+  if (/-pay$/.test(key)) return "Payment verified";
+  if (/^ok/.test(key)) return "Document verified";
+  if (/^no/.test(key)) return "Document rejected";
+  if (/^a[a-f0-9]{24}$/.test(key)) return "Offer accepted";
+  if (/^r[a-f0-9]{24}$/.test(key)) return "Offer declined";
+  if (/^y[a-f0-9]{24}$/.test(key)) return "Approved";
+  if (/^n[a-f0-9]{24}$/.test(key)) return "Declined";
+  if (/^[A-Z_]+$/.test(key)) return "Delivery updated";
+  if (key.startsWith("{")) return "Settings saved";
+  return "Updated";
+}
+
+/**
+ * Run an API call with busy/error state and refresh the given queries afterwards.
+ * Every button that changes data goes through this, so results and failures are always shown (inline and as a toast).
+ */
+export function useAction(invalidate: string[] = [], options: { toast?: boolean } = {}) {
   const client = useQueryClient();
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<unknown>(null);
-  async function run<T>(key: string, task: () => Promise<T>): Promise<T | undefined> {
+  async function run<T>(key: string, task: () => Promise<T>, message?: string | null): Promise<T | undefined> {
     setBusy(key);
     setError(null);
     try {
       const result = await task();
       await Promise.all(invalidate.map((queryKey) => client.invalidateQueries({ queryKey: [queryKey] })));
+      const text = message === undefined ? successMessage(key) : message;
+      if (text && options.toast !== false) toast.success(text);
       return result;
     } catch (reason) {
       setError(reason);
+      if (options.toast !== false) toast.error("That didn't work", errorMessage(reason));
       return undefined;
     } finally {
       setBusy(null);

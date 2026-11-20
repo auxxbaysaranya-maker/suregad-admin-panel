@@ -45,7 +45,7 @@ function Sidebar({ current, onNavigate, locked }: { current: PanelKey; onNavigat
         </div>
       ) : null}
 
-      <nav className="min-h-0 flex-1 space-y-0.5 overflow-y-auto px-3 pb-3" aria-label={`${info.label} navigation`}>
+      <nav className="scrollbar-none min-h-0 flex-1 space-y-0.5 overflow-y-auto overscroll-contain px-3 pb-3" aria-label={`${info.label} navigation`}>
         {locked ? <p className="mx-1 mb-2 rounded-xl bg-white/5 px-3 py-2 text-[12px] text-white/60">Tools unlock once SureGad approves your account.</p> : null}
         {info.links.map((link) => (
           <div key={link.to}>
@@ -87,12 +87,26 @@ function Sidebar({ current, onNavigate, locked }: { current: PanelKey; onNavigat
   );
 }
 
+/** True at the lg breakpoint, where the sidebar layout (and its bell) is shown. */
+function useDesktop() {
+  const query = "(min-width: 1024px)";
+  const [desktop, setDesktop] = useState(() => window.matchMedia(query).matches);
+  useEffect(() => {
+    const media = window.matchMedia(query);
+    const update = () => setDesktop(media.matches);
+    media.addEventListener("change", update);
+    return () => media.removeEventListener("change", update);
+  }, []);
+  return desktop;
+}
+
 /** Layout for every panel page: fixed sidebar on desktop, slide-in drawer on phones. */
 export function PanelShell({ current, children, locked }: { current: PanelKey; children: ReactNode; locked?: boolean }) {
   const [open, setOpen] = useState(false);
   const { pathname } = useLocation();
   useEffect(() => setOpen(false), [pathname]);
   const info = panel(current);
+  const desktop = useDesktop();
   return (
     <div className="min-h-screen bg-canvas lg:grid lg:grid-cols-[268px_minmax(0,1fr)]">
       <aside className="sticky top-0 hidden h-screen bg-ink lg:block">
@@ -105,7 +119,7 @@ export function PanelShell({ current, children, locked }: { current: PanelKey; c
           <span className="truncate font-display text-[16px] font-bold">{info.label} panel</span>
         </Link>
         <div className="flex items-center gap-2">
-          <NotificationBell panel={current} />
+          <NotificationBell panel={current} live={!desktop} />
           <button type="button" onClick={() => setOpen(true)} aria-label="Open menu" className="grid h-10 w-10 place-items-center rounded-full bg-white/10">
             <Menu size={20} />
           </button>
@@ -126,7 +140,7 @@ export function PanelShell({ current, children, locked }: { current: PanelKey; c
 
       <main className="min-w-0 px-4 py-6 sm:px-6 lg:px-10 lg:py-8">
         <div className="mb-4 hidden justify-end lg:flex">
-          <NotificationBell panel={current} tone="light" />
+          <NotificationBell panel={current} tone="light" live={desktop} />
         </div>
         {children}
       </main>

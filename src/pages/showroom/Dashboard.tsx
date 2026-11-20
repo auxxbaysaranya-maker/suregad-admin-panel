@@ -50,14 +50,14 @@ export function ShowroomDashboard() {
           </>
         }
       />
-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
         <StatCard icon={IndianRupee} label="Revenue, last 30 days" value={money(data.revenue30Paise)} hint={`${money(data.lifetimeRevenuePaise)} all time`} />
         <StatCard icon={Package} label="Live listings" value={data.listings.active || 0} hint={data.actions.pendingReview ? `${data.actions.pendingReview} waiting for review` : undefined} tone="green" onClick={() => navigate("/seller/products")} />
         <StatCard icon={Boxes} label="Units available" value={data.units.AVAILABLE || 0} hint={`${data.units.RESERVED || 0} reserved · ${data.units.SOLD || 0} sold`} tone="violet" onClick={() => navigate("/seller/inventory")} />
         <StatCard icon={Star} label="Rating" value={data.rating.average ?? "—"} hint={`${data.rating.count} review${data.rating.count === 1 ? "" : "s"}`} tone="amber" onClick={() => navigate("/seller/reviews")} />
       </div>
 
-      <div className="mt-5 grid gap-3 sm:grid-cols-3 xl:grid-cols-6">
+      <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-6">
         {actions.map((action) => (
           <Link key={action.label} to={action.to} className={`rounded-[20px] p-4 ring-1 transition hover:ring-brand-300 ${action.urgent ? "bg-brand-50 ring-brand-200" : "bg-white ring-line"}`}>
             <action.icon size={18} className={action.urgent ? "text-brand-600" : "text-muted"} />
