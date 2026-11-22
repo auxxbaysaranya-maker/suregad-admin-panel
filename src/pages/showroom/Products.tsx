@@ -8,6 +8,8 @@ import { cn, money, titleCase } from "../../lib/utils";
 import { PageHeader } from "../../components/PanelShell";
 import { Modal } from "../../components/Modal";
 import { PhotoUploader, photosFromListing, readyKeys, type Photo } from "../../components/PhotoUploader";
+import { MapPicker } from "../../components/MapPicker";
+import { useShowroom } from "./shared";
 import { Btn, Empty, ErrorBox, Field, Loading, Notice, Pager, Panel, Pill, SearchBox, Select, StatusPill, Tabs, TextArea, TextInput, Toggle, formatDateTime, useAction } from "../../components/kit";
 
 export interface Listing {
@@ -30,6 +32,7 @@ export interface Listing {
   stock: { available: number; reserved: number; sold: number };
   lowStockThreshold: number | null;
   priceHistory: { pricePaise: number; reason: string; at: string }[];
+  pickup: Pickup | null;
   promo: { promotionId: string; basePricePaise: number; endsAt: string } | null;
   views: number;
   warrantyMonths: number;
@@ -241,6 +244,24 @@ function ImportModal({ open, onClose }: { open: boolean; onClose: () => void }) 
 
 /* ---------------- create / edit ---------------- */
 
+export interface Pickup {
+  lat: number;
+  lng: number;
+  city: string;
+  district: string;
+  state: string;
+  pincode: string;
+}
+
+type PickupDraft = { mode: "showroom" | "custom"; point: { lat: number; lng: number } | null; city: string; district: string; state: string; pincode: string };
+
+/** A listing has its own pickup point when it is more than ~100 m from the showroom pin. */
+function differsFromShowroom(pickup: Pickup | null, showroom: { lat: number; lng: number } | null | undefined) {
+  if (!pickup) return false;
+  if (!showroom) return true;
+  return Math.abs(pickup.lat - showroom.lat) > 0.001 || Math.abs(pickup.lng - showroom.lng) > 0.001;
+}
+
 interface UnitDraft { imei: string; serial: string; colour: string; cost: string }
 
 function specsForm(listing?: Listing) {
@@ -266,7 +287,16 @@ export function ProductFormPage() {
   const [photos, setPhotos] = useState<Photo[]>([]);
   const [units, setUnits] = useState<UnitDraft[]>([{ imei: "", serial: "", colour: "", cost: "" }]);
   const [ready, setReady] = useState(!editing);
+  const showroom = useShowroom();
+  const [pickup, setPickup] = useState<PickupDraft>({ mode: "showroom", point: null, city: "", district: "", state: "Kerala", pincode: "" });
+  const [pickupTouched, setPickupTouched] = useState(false);
+  const [pickupError, setPickupError] = useState("");
   const action = useAction(["showroom-products", "showroom-product", "showroom-dashboard", "showroom-inventory"]);
+  const updatePickup = (patch: Partial<PickupDraft>) => {
+    setPickup((current) => ({ ...current, ...patch }));
+    setPickupTouched(true);
+    setPickupError("");
+  };
 
   useEffect(() => {
     if (!listing || ready) return;
@@ -285,8 +315,11 @@ export function ProductFormPage() {
       ...specsForm(listing),
     });
     setPhotos(photosFromListing(listing.images));
+    if (listing.pickup && differsFromShowroom(listing.pickup, showroom.data?.location)) {
+      setPickup({ mode: "custom", point: { lat: listing.pickup.lat, lng: listing.pickup.lng }, city: listing.pickup.city, district: listing.pickup.district, state: listing.pickup.state, pincode: listing.pickup.pincode });
+    }
     setReady(true);
-  }, [listing, ready]);
+  }, [listing, ready, showroom.data]);
 
   const set = (key: keyof typeof form) => (event: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => setForm({ ...form, [key]: event.target.value });
   const uploading = photos.some((photo) => photo.status === "uploading");
@@ -300,8 +333,21 @@ export function ProductFormPage() {
     displayInches: form.displayInches ? Number(form.displayInches) : undefined,
   };
 
+  /** The pickup to send: a custom point, null to go back to the showroom address, or undefined for "unchanged". */
+  function pickupPayload(): Pickup | null | undefined | false {
+    if (pickup.mode === "showroom") return editing ? (pickupTouched ? null : undefined) : undefined;
+    if (!pickup.point) return (setPickupError("Tap the map to place the pickup point."), false);
+    if (pickup.city.trim().length < 2 || pickup.district.trim().length < 2) return (setPickupError("Enter the pickup city and district."), false);
+    if (!/^[1-9][0-9]{5}$/.test(pickup.pincode.trim())) return (setPickupError("Enter a 6-digit PIN code."), false);
+    if (editing && !pickupTouched) return undefined;
+    return { lat: pickup.point.lat, lng: pickup.point.lng, city: pickup.city.trim(), district: pickup.district.trim(), state: pickup.state.trim() || "Kerala", pincode: pickup.pincode.trim() };
+  }
+
   async function save(submit: boolean) {
+    const pickupValue = pickupPayload();
+    if (pickupValue === false) return;
     const base = {
+      ...(pickupValue !== undefined ? { pickup: pickupValue } : {}),
       title: form.title,
       description: form.description,
       itemType: form.itemType,
@@ -421,6 +467,32 @@ export function ProductFormPage() {
               </div>
             </Panel>
           ) : null}
+          <Panel title="Pickup location" description="Where buyers collect the device and where it shows up in nearby searches. Your showroom address is used unless you choose another point.">
+            <div className="grid gap-2 sm:grid-cols-2" role="radiogroup" aria-label="Pickup location">
+              {([
+                ["showroom", "Showroom address", showroom.data?.address?.city ? `${showroom.data.address.line1 || ""} ${showroom.data.address.city}`.trim() : "From your business profile"],
+                ["custom", "Different pickup point", "Pick a spot on the map"],
+              ] as const).map(([mode, title, hint]) => (
+                <button key={mode} type="button" role="radio" aria-checked={pickup.mode === mode} onClick={() => updatePickup({ mode, ...(mode === "custom" && !pickup.point && showroom.data?.location ? { point: showroom.data.location, city: showroom.data.address?.city || "", district: showroom.data.address?.district || "", state: showroom.data.address?.state || "Kerala", pincode: showroom.data.address?.pincode || "" } : {}) })} className={cn("rounded-2xl p-3.5 text-left ring-2 transition", pickup.mode === mode ? "bg-brand-50 ring-brand-500" : "bg-white ring-line hover:ring-brand-200")}>
+                  <span className="block text-[14px] font-semibold">{title}</span>
+                  <span className="mt-0.5 block truncate text-[12px] text-muted">{hint}</span>
+                </button>
+              ))}
+            </div>
+            {pickup.mode === "custom" ? (
+              <div className="mt-4 space-y-3">
+                <MapPicker value={pickup.point} onChange={(point) => updatePickup({ point })} height={240} />
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <Field label="City"><TextInput value={pickup.city} onChange={(event) => updatePickup({ city: event.target.value })} /></Field>
+                  <Field label="District"><TextInput value={pickup.district} onChange={(event) => updatePickup({ district: event.target.value })} /></Field>
+                  <Field label="State"><TextInput value={pickup.state} onChange={(event) => updatePickup({ state: event.target.value })} /></Field>
+                  <Field label="PIN code"><TextInput inputMode="numeric" maxLength={6} value={pickup.pincode} onChange={(event) => updatePickup({ pincode: event.target.value.replace(/D/g, "") })} /></Field>
+                </div>
+                <p className="text-[12px] text-muted">Buyers see only the approximate area until they order. Moving your phone never changes this point.</p>
+              </div>
+            ) : null}
+            {pickupError ? <p className="mt-3 text-[13px] text-danger">{pickupError}</p> : null}
+          </Panel>
         </div>
         <div className="space-y-5">
           <Panel title="Selling terms">
