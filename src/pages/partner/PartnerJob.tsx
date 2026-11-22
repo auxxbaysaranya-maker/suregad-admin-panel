@@ -6,6 +6,7 @@ import { api } from "../../lib/api";
 import { money } from "../../lib/utils";
 import { API_BASE } from "../../lib/config";
 import { Badge, Button, Card, Empty, ErrorNote, Field, Input, TextArea } from "../../components/ui";
+import { uploadError } from "../../lib/upload";
 
 const RESULTS = ["passed", "failed", "not_tested", "not_applicable", "unable_to_verify"] as const;
 type CheckResult = (typeof RESULTS)[number];
@@ -135,10 +136,10 @@ async function uploadEvidence(jobId: string, file: File) {
     for (const [name, value] of Object.entries(signed.fields)) body.append(name, value);
     body.append("file", prepared, file.name);
     const response = await fetch(signed.uploadUrl, { method: "POST", body });
-    if (!response.ok) throw new Error("Evidence upload failed.");
+    if (!response.ok) throw new Error(await uploadError(response));
   } else if (signed.method === "PUT") {
     const response = await fetch(signed.uploadUrl, { method: "PUT", headers: { "Content-Type": prepared.type || file.type }, body: prepared });
-    if (!response.ok) throw new Error("Evidence upload failed.");
+    if (!response.ok) throw new Error(await uploadError(response));
   } else {
     const token = localStorage.getItem("sg_token");
     const response = await fetch(`${API_BASE}/uploads/local?key=${encodeURIComponent(signed.key)}`, {
@@ -146,7 +147,7 @@ async function uploadEvidence(jobId: string, file: File) {
       headers: { Authorization: token ? `Bearer ${token}` : "", "Content-Type": prepared.type || file.type },
       body: prepared,
     });
-    if (!response.ok) throw new Error("Evidence upload failed.");
+    if (!response.ok) throw new Error(await uploadError(response));
   }
   await api.post(`/partner/jobs/${jobId}/evidence`, { key: signed.key, caption: file.name });
 }
