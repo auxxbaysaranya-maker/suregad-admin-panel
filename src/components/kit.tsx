@@ -221,7 +221,7 @@ export function Notice({ tone = "brand", icon: Icon, children, action }: { tone?
   return (
     <div className={cn("flex flex-wrap items-center gap-3 rounded-2xl px-4 py-3 text-[14px] ring-1", tones)}>
       {Icon ? <Icon size={18} className="shrink-0" /> : null}
-      <div className="min-w-0 flex-1">{children}</div>
+      <div className="min-w-[min(100%,220px)] flex-1 [overflow-wrap:anywhere]">{children}</div>
       {action}
     </div>
   );

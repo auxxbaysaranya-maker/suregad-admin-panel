@@ -4,7 +4,7 @@ import { Loader2 } from "lucide-react";
 import { useSession } from "./store/session";
 import { panel, panelsFor, type PanelKey } from "./lib/panels";
 import { PanelShell } from "./components/PanelShell";
-import { LoginPage, SignupPage } from "./pages/auth/AuthPages";
+import { ForgotPasswordPage, LoginPage, SignupPage } from "./pages/auth/AuthPages";
 import { PartnerJobsPage } from "./pages/partner/PartnerPages";
 import { PartnerEarnings, PartnerJobPage } from "./pages/partner/PartnerJob";
 import { AdminHome, AdminListings, AdminPeople } from "./pages/admin/AdminPages";
@@ -81,6 +81,7 @@ export function App() {
         <Route path="/" element={<Home />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/signup" element={<SignupPage />} />
+        <Route path="/forgot-password" element={<ForgotPasswordPage />} />
 
         <Route path="/seller" element={<Navigate to="/seller/dashboard" replace />} />
         <Route path="/seller/onboarding" element={<Seller open><ShowroomOnboarding /></Seller>} />
