@@ -83,7 +83,7 @@ export function AdminListings() {
     <div>
       <PageHeader title="Listing review" description="New and edited listings wait here until approved. Check every photo before approving." />
       <div className="mb-5 flex flex-wrap gap-2">
-        {[["pending_review", "Waiting"], ["active", "Live"], ["rejected", "Rejected"]].map(([key, label]) => (
+        {[["pending_review", "Waiting"], ["active", "Live"], ["rejected", "Rejected"], ["expired", "Expired"], ["sold", "Sold"]].map(([key, label]) => (
           <button key={key} type="button" onClick={() => setStatus(key!)} className={cn("rounded-full px-4 py-2 text-[13px] font-semibold ring-1 transition", status === key ? "bg-ink text-white ring-ink" : "bg-white text-ink-soft ring-line hover:ring-brand-200")}>
             {label}
           </button>
@@ -109,12 +109,12 @@ export function AdminListings() {
               <Badge tone={listing.status === "active" ? "green" : listing.status === "rejected" ? "red" : "amber"}>{titleCase(listing.status)}</Badge>
             </div>
             <div className="mt-4 flex flex-wrap gap-2">
-              {listing.status !== "active" ? (
+              {!["active", "sold", "expired"].includes(listing.status || "") ? (
                 <button type="button" disabled={moderate.isPending} onClick={() => moderate.mutate({ id: listing.id, status: "active" })} className="inline-flex items-center gap-1.5 rounded-full bg-emerald-600 px-4 py-2 text-[13px] font-semibold text-white disabled:opacity-60">
                   {moderate.isPending && moderate.variables?.id === listing.id ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />} Approve
                 </button>
               ) : null}
-              {listing.status !== "rejected" ? (
+              {!["rejected", "sold", "expired"].includes(listing.status || "") ? (
                 <button type="button" disabled={moderate.isPending} onClick={() => moderate.mutate({ id: listing.id, status: "rejected" })} className="inline-flex items-center gap-1.5 rounded-full bg-white px-4 py-2 text-[13px] font-semibold text-danger ring-1 ring-red-200 disabled:opacity-60">
                   <X size={14} /> Reject
                 </button>

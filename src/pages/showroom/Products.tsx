@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import { Archive, Copy, Download, Eye, EyeOff, FileUp, ImagePlus, Package, Plus, Trash2 } from "lucide-react";
+import { Archive, Check, Copy, Download, Eye, EyeOff, FileUp, ImagePlus, Package, Plus, RotateCcw, Trash2 } from "lucide-react";
 import { api, downloadFile } from "../../lib/api";
 import { marketplaceUrl } from "../../lib/config";
 import { cn, money, titleCase } from "../../lib/utils";
@@ -31,6 +31,8 @@ export interface Listing {
   stockTracked: boolean;
   stock: { available: number; reserved: number; sold: number };
   lowStockThreshold: number | null;
+  expiresAt: string | null;
+  soldOut: { at: string; reason: string; note: string } | null;
   priceHistory: { pricePaise: number; reason: string; at: string }[];
   pickup: Pickup | null;
   promo: { promotionId: string; basePricePaise: number; endsAt: string } | null;
@@ -42,12 +44,22 @@ export interface Listing {
   createdAt: string;
 }
 
+const SOLD_REASONS: Record<string, string> = {
+  sold_on_suregad: "Sold to a SureGad buyer",
+  sold_elsewhere: "Sold in store or elsewhere",
+  no_longer_selling: "No longer selling",
+  damaged_or_lost: "Damaged or lost",
+  other: "Other reason",
+};
+
 const TABS = [
   { value: "", label: "All" },
   { value: "active", label: "Live" },
   { value: "pending_review", label: "In review" },
   { value: "draft", label: "Drafts" },
   { value: "rejected", label: "Rejected" },
+  { value: "expired", label: "Expired" },
+  { value: "sold", label: "Sold out" },
   { value: "unpublished", label: "Hidden" },
   { value: "low_stock", label: "Low stock" },
   { value: "out_of_stock", label: "Out of stock" },
@@ -157,6 +169,8 @@ export function ProductsPage() {
                       {row.onHold ? <Pill tone="red">On hold</Pill> : null}
                       <Pill tone="violet">{titleCase(row.itemType)}</Pill>
                       {row.promo ? <Pill tone="green">On offer</Pill> : null}
+                      {row.status === "active" && row.expiresAt ? <span>Valid until {new Date(row.expiresAt).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}</span> : null}
+                      {row.soldOut ? <span>{SOLD_REASONS[row.soldOut.reason] || row.soldOut.reason}</span> : null}
                     </span>
                   </span>
                 </Link>
@@ -547,6 +561,9 @@ export function ProductFormPage() {
 }
 
 function ListingActions({ listing, onChanged }: { listing: Listing; onChanged: () => void }) {
+  const [soldOpen, setSoldOpen] = useState(false);
+  const [reason, setReason] = useState("sold_elsewhere");
+  const [note, setNote] = useState("");
   const navigate = useNavigate();
   const action = useAction(["showroom-products", "showroom-dashboard"]);
   return (
@@ -554,9 +571,22 @@ function ListingActions({ listing, onChanged }: { listing: Listing; onChanged: (
       {["active", "reserved", "sold"].includes(listing.status) && listing.published ? (
         <a href={marketplaceUrl(`product/${listing.slug}`)} target="_blank" rel="noreferrer" className="inline-flex h-11 items-center gap-2 rounded-full bg-white px-4 text-[14px] font-semibold ring-1 ring-line hover:ring-brand-300"><Eye size={16} /> View</a>
       ) : null}
-      <Btn variant="secondary" icon={listing.published && listing.status !== "draft" ? EyeOff : Eye} busy={action.busy === "publish"} onClick={() => void action.run("publish", () => api.post(`/showroom/products/${listing.id}/publish`, { published: !(listing.published && listing.status !== "draft") })).then(onChanged)}>
+      {["active", "pending_review"].includes(listing.status) ? <Btn variant="secondary" icon={Check} onClick={() => setSoldOpen(true)}>Mark sold out</Btn> : null}
+      {listing.status === "expired" ? <Btn icon={RotateCcw} busy={action.busy === "renew"} onClick={() => void action.run("renew", () => api.post(`/showroom/products/${listing.id}/renew`)).then(onChanged)}>Renew</Btn> : null}
+      {listing.status === "sold" && listing.soldOut ? <Btn icon={RotateCcw} busy={action.busy === "relist"} onClick={() => void action.run("relist", () => api.post(`/showroom/products/${listing.id}/publish`, { published: true })).then(onChanged)}>Put back on sale</Btn> : null}
+      {listing.status === "active" && listing.expiresAt ? <span className="text-[13px] text-muted">Valid until {formatDateTime(listing.expiresAt)}</span> : null}
+      {listing.soldOut ? <span className="text-[13px] text-muted">{SOLD_REASONS[listing.soldOut.reason]}{listing.soldOut.note ? ` · ${listing.soldOut.note}` : ""} · {formatDateTime(listing.soldOut.at)}</span> : null}
+      <Modal open={soldOpen} onOpenChange={setSoldOpen} title="Mark as sold out" description="The listing comes down now and its available units become unlisted. You can put it back on sale while its validity lasts." size="sm">
+        <div className="space-y-4">
+          <Field label="Reason"><Select value={reason} onChange={(event) => setReason(event.target.value)}>{Object.entries(SOLD_REASONS).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</Select></Field>
+          <Field label={reason === "other" ? "Note (required)" : "Note (optional)"}><TextArea maxLength={500} value={note} onChange={(event) => setNote(event.target.value)} /></Field>
+          <Btn busy={action.busy === "sold"} disabled={reason === "other" && note.trim().length < 3} onClick={() => void action.run("sold", () => api.post(`/showroom/products/${listing.id}/sold`, { reason, note: note.trim() || undefined })).then((done) => { if (done) { setSoldOpen(false); onChanged(); } })}>Mark sold out</Btn>
+          {action.error ? <p className="text-[13px] text-danger">{(action.error as Error).message}</p> : null}
+        </div>
+      </Modal>
+      {listing.soldOut || listing.status === "expired" ? null : <Btn variant="secondary" icon={listing.published && listing.status !== "draft" ? EyeOff : Eye} busy={action.busy === "publish"} onClick={() => void action.run("publish", () => api.post(`/showroom/products/${listing.id}/publish`, { published: !(listing.published && listing.status !== "draft") })).then(onChanged)}>
         {listing.published && listing.status !== "draft" ? "Hide" : "Publish"}
-      </Btn>
+      </Btn>}
       <Btn variant="secondary" icon={Copy} busy={action.busy === "dup"} onClick={() => void action.run("dup", async () => (await api.post(`/showroom/products/${listing.id}/duplicate`)).data.data as Listing).then((copy) => copy && navigate(`/seller/products/${copy.id}`))}>Duplicate</Btn>
       <Btn variant="danger" icon={Archive} busy={action.busy === "archive"} onClick={() => window.confirm("Archive this listing? Available units become unlisted.") && void action.run("archive", () => api.post(`/showroom/products/${listing.id}/archive`)).then((done) => done && navigate("/seller/products"))}>Archive</Btn>
       {action.error ? <p className="w-full text-[13px] text-danger">{(action.error as Error).message}</p> : null}

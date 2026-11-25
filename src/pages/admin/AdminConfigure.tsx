@@ -43,7 +43,7 @@ interface Plan {
   monthlyPricePaise: number;
   annualPricePaise: number;
   gracePeriodDays: number;
-  limits: { activeListings: number; monthlyListings: number; photosPerListing: number; employees: number };
+  limits: { activeListings: number; monthlyListings: number; photosPerListing: number; employees: number; listingValidityDays?: number };
 }
 
 function PlansPanel() {
@@ -62,6 +62,7 @@ function PlansPanel() {
           monthlyListings: Number(form.get("monthlyListings")),
           photosPerListing: Number(form.get("photos")),
           employees: Number(form.get("employees")),
+          listingValidityDays: Number(form.get("validity")),
         },
       });
       await client.invalidateQueries({ queryKey: ["admin-plans"] });
@@ -87,6 +88,8 @@ function PlansPanel() {
             <Field label="Listings per month"><Input name="monthlyListings" defaultValue={plan.limits.monthlyListings} /></Field>
             <Field label="Photos per listing"><Input name="photos" defaultValue={plan.limits.photosPerListing} /></Field>
             <Field label="Employees"><Input name="employees" defaultValue={plan.limits.employees} /></Field>
+            <Field label="Listing validity (days, 0 = no limit)"><Input name="validity" type="number" min={0} max={365} required defaultValue={plan.limits.listingValidityDays ?? 30} /></Field>
+            {plan.code === "individual_free" ? <p className="text-sm text-slate-500 md:col-span-3">Applies to ordinary users selling from the marketplace. Validity starts when a listing is approved; live listings keep the date they already have.</p> : null}
             <div className="md:col-span-2 md:self-end"><Button type="submit">Save {plan.code}</Button></div>
           </form>
         </Card>
